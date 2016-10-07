@@ -1,5 +1,7 @@
 jQuery( document ).ready( function( $ ){
 
+	var batch_completed = false;
+	
 	//- instantiate the datepicker
 	$( ".datepicker" ).datepicker( {
 		changeMonth: true,
@@ -12,58 +14,39 @@ jQuery( document ).ready( function( $ ){
     $( '#export_events' ).click( function( event ){
         event.preventDefault();
         
-		//- grab the start and end dates
+		//- grab the start and end dates. format is mm-dd-yyyy
 		var start = $( '#start_date' ).val();
 		var end = $( '#end_date' ).val();
 		
-		var filename = 'events-' + start + '-to-' + end + '-export.docx';
-        var datalink = $('#datalink');
+		//- get the selected category(ies)
+		var categories =  $( 'input[name="term[]"]:checked').map( function(){
+			return this.value;
+		} ).get();
+
         //- change the download name
+		var filename = 'events-' + start + '-to-' + end + '-export.rtf';
+        var datalink = $( '#datalink' );
         datalink.prop( { 'download':filename } );
-		
-		console.log( start, end );
-		
+
 		//- ai1ec saves dates as Unix timestamps in GMT. 
-		
-        var action = 'admin-ajax-'+ $(this).data('action');
-        var form_data = $(this).parents('form').serializeArray();
+        $( this ).prev( '.spinner' ).addClass( 'is-active' );
         
-        if(batch_completed == true){
-            $('.update-now').removeClass( 'updated-message' );
-        }
+        //- sends the ajax form submit
+        $.ajax( {
+			method: "POST",
+			url: ajaxurl,
+			data: { 
+					action: 'ai1ec_export_events',
+					start_date: start,
+					end_date: end,
+					categories: categories
+				},
+            success: function( data ) {
+                        $('.spinner').removeClass('is-active');
+                        datalink.attr( "href", 'data:Application/rtf,' + encodeURIComponent(data))[0].click();
 
-        $('.update-now').addClass('updating-message');
-        generate_pdf(action);
-        
-        //- sends a call to ajax-pdf-export.controller.php
-        function generate_pdf(){
-            var method = (num_selected > 0) ? 'selected' : 'batch';
-            $.ajax({
-                    type: "POST",
-                    url: ajaxurl,
-                    dataType: "json",
-                    data: { 
-                            action: 'ai1ec_export_events',
-                            selected: selected_ids,
-                            form_data: form_data
-                        }
-                    })
-            
-            //- Successful response
-            .done( function(response, status, jqXHR) {
-                batch_completed = response.completed;
-                if (batch_completed == true) {
-                    $('.update-now').removeClass('updating-message').addClass('updated-message');
-                    $('#ajax-target').before(response.msg);
-                }
-            })
-
-            //- Error catching
-            .fail(function(jqhr, textStatus, error){
-                var err = textStatus + ", " + error;
-                console.log("Request Failed: " + err);
-            });
-        }       
+                    }   
+			} );
 
     });
 	
