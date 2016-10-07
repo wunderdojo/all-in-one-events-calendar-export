@@ -1,14 +1,13 @@
 <?php
 
 /**
-  Plugin Name: All in One Event Calendar Export
-  Version: 1.0.0
-  Description: All in One Event Calendar add on that exports events to a text file
-  Author: James Currie
-  Author URI: http://www.wunderdojo.com
+ * Plugin Name: All in One Event Calendar Export
+ * Version: 1.0.0
+ * Description: All in One Event Calendar add on that exports events to a text file
+ * Author: James Currie
+ * Author URI: http://www.wunderdojo.com
 
-  ------------------------------------------------------------------------
-  Copyright 2016 wunderdojo LLC
+ * Copyright 2016 wunderdojo LLC
 
  */
     
