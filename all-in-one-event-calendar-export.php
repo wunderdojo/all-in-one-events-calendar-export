@@ -44,7 +44,7 @@ if( ! class_exists( 'AI1EC_Export' ) ){
 	    wp_enqueue_script( 'jquery-ui-datepicker' );
 	    
 	    //- load in the js file to handle form submission
-	    wp_enqueue_script( 'ajax-export-events', trailingslashit( plugins_url( '', __FILE__) ) .'js/ajax-export-events.' . $suffix .'js', true );
+	    wp_enqueue_script( 'ajax-export-events', trailingslashit( plugins_url( '', __FILE__) ) .'js/ajax-export-events' . $suffix .'.js', true );
 	    
 	    //- load jQuery UI styles
 	    wp_enqueue_style( 'jquery-ui-base', trailingslashit( plugins_url( '', __FILE__) ) .'css/jquery-ui-base.min.css', true );
