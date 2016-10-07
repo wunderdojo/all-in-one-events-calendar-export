@@ -37,11 +37,14 @@ if( ! class_exists( 'AI1EC_Export' ) ){
 	//- creates an admin screen where you can choose a range of dates and categories for events to export
 	function display_export_options(){
 	    
+	    //- Load unminified js file for debugging
+            $suffix = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '': '.min'; 
+	    
 	    //- load jQuery UI datepicker
 	    wp_enqueue_script( 'jquery-ui-datepicker' );
 	    
 	    //- load in the js file to handle form submission
-	    wp_enqueue_script( 'ajax-export-events', trailingslashit( plugins_url( '', __FILE__) ) .'js/ajax-export-events.js', true );
+	    wp_enqueue_script( 'ajax-export-events', trailingslashit( plugins_url( '', __FILE__) ) .'js/ajax-export-events.' . $suffix .'js', true );
 	    
 	    //- load jQuery UI styles
 	    wp_enqueue_style( 'jquery-ui-base', trailingslashit( plugins_url( '', __FILE__) ) .'css/jquery-ui-base.min.css', true );
