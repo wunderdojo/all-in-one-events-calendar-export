@@ -143,10 +143,12 @@ FORM;
 	    
 	    $end_time->set_date( $end[2], $end[0], $end[1] )->set_time( 23, 59, 59 );
 	    
+	    $categories = ( isset ( $categories ) && ! in_array( 'all', $categories ) ) ? array( 'cat_ids' => $categories ) : array();
+	    
 	    $events = $search->get_events_between(
 		    $start_time,
 		    $end_time,
-		    array(),
+		    $categories,
 		    false, //- spanning -- whether to show events that span this period even if they start/end outside the selected dates
 		    false //- whether or not we're searching for events on a single day
 		    );
