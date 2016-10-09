@@ -21,13 +21,13 @@ This add on was created for a single client and makes certain assumptions (ex: t
 
 ##NOTES
 Recurring events are listed only once on the date they first occur, like so:
----
+* * *
 
 **SATURDAY, OCT. 8 - FRIDAY, OCT. 14**
 
 **Event Title**
 This is the description of the event. Event start - end times. $ticket price. **Venue**: Street Address, City, State, Zip; ticket url OR venue url OR organizer url
----
+* * *
 
 
 If the event has start / end times specified they will be listed, same for ticket price. It outputs only one URL per event -- first it looks for a ticket URL, if none exists it looks for a venue URL, and then it checks for an organizer URL.
