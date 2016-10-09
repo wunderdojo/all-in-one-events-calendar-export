@@ -14,12 +14,12 @@
 if( ! class_exists( 'AI1EC_Export' ) ){
  
     class AI1EC_Export{
-	
+
 	var $ai1ec_registry = null;
 
-    var $repeating_events = array();
+	var $repeating_events = array();
 
-    var $events_to_display = null;
+	var $events_to_display = null;
 
 
 	
@@ -221,40 +221,41 @@ FORM;
 	}
 
 
-    /**
-     * Check to see if an event should be displayed (repeating event on first occurrence or one-time event)
-     * 
-     * @param object $instance
-     * 
-     * @return string $details -- the event description formatted for RTF
-     */
-    public function process_event( $instance, $date ){
+	/**
+	 * Check to see if an event should be displayed (repeating event on first occurrence or one-time event)
+	 * 
+	 * @param object $instance
+	 * 
+	 * @return string $details -- the event description formatted for RTF
+	 */
+	public function process_event( $instance, $date ){
 
-        $details = null;
+	    $details = null;
 
-        if( ! in_array( $instance['post_id'], $this->repeating_events, true ) ){
-            $this->events_to_display = true;
+	    if( ! in_array( $instance['post_id'], $this->repeating_events, true ) ){
+		$this->events_to_display = true;
 
-            if( $instance['is_multiday'] == 1 ){
-               $this->repeating_events[] = $instance['post_id'];
+		if( $instance['is_multiday'] == 1 ){
+		   $this->repeating_events[] = $instance['post_id'];
 
-                $end = date( 'l, F d', strtotime( "{$instance['enddate_info']['month']} {$instance['enddate_info']['day']} {$instance['enddate_info']['year']}" ) );
+		    $end = date( 'l, F d', strtotime( "{$instance['enddate_info']['month']} {$instance['enddate_info']['day']} {$instance['enddate_info']['year']}" ) );
 
-                $display_date = sprintf( '{\b\caps %1$s, %2$s %3$s - %4$s} {\line\line}', 
-	                $date['full_weekday'],
-	                $date['full_month'],
-	                $date['day'],
-                    $end );
+		    //- multi-day events get their own date listing, ex: SATURDAY, OCT. 8 - FRIDAY, OCT. 14
+		    $display_date = sprintf( '{\b\caps %1$s, %2$s %3$s - %4$s} {\line\line}', 
+			    $date['full_weekday'],
+			    $date['full_month'],
+			    $date['day'],
+			$end );
 
-                $details .= $display_date;
-            }
+		    $details .= $display_date;
+		}
 
-            //- get the event details
-            $details .= $this->get_event_details( $instance );
-        }
+		//- get the event details
+		$details .= $this->get_event_details( $instance );
+	    }
 
-        return ( $details ) ? $details : '';
-    }
+	    return ( $details ) ? $details : '';
+	}
 	
 	/**
 	 * Given a post ID get the details and return a formatted string to be output
@@ -277,12 +278,12 @@ FORM;
 	    $event = $this->ai1ec_registry->get( 'model.event', $instance['post_id'] );
 	    
 	    //- Title
-        $title_clean = $this->format_for_rtf( $event->get( 'post' )->post_title );
+	    $title_clean = $this->format_for_rtf( $event->get( 'post' )->post_title );
 
 	    $output .= '{\b ' . $title_clean . '}{\line}';
 	    
 	    //- Description
-        $output .= $this->format_for_rtf( wp_strip_all_tags( $event->get( 'post' )->post_content ) );
+	    $output .= $this->format_for_rtf( wp_strip_all_tags( $event->get( 'post' )->post_content ) );
 	    
 	    //- Start time -- only for non all day events
 	    if( ! $instance['is_allday'] ){
@@ -290,7 +291,7 @@ FORM;
 		$output .= " " . str_replace( '–', '-', explode( '@', $instance['timespan_short'] )[1] ) .'.';
 	    }
 
-        //- Ticket price
+	    //- Ticket price
 	    $output .= ( $instance['is_free'] ) ? 'FREE.' : ( isset( $instance['cost'] ) ? $instance['cost'] . '.' : '' );
 
 	    //- check for a venue
@@ -309,7 +310,7 @@ FORM;
             $output .= str_replace( ', USA', '', $event->get( 'address' ) ) . '; ';  
 		}
 		
-        //- Show the ticket URL if there is one or else show the venue URL or organizer URL if there is one. Don't show both.
+	    //- Show the ticket URL if there is one or else show the venue URL or organizer URL if there is one. Don't show both.
 	    //- Ticket URL
 	    if( $event->get( 'ticket_url' ) ){
 		    $output .= $this->clean_url( $event->get( 'ticket_url' ) );  
@@ -332,25 +333,25 @@ FORM;
 	    
 	}
 
-    //- fix punctuation issues caused by people cutting-and-pasting from Word docs
-    public function format_for_rtf( $text ){
+	//- fix punctuation issues caused by people cutting-and-pasting from Word docs
+	public function format_for_rtf( $text ){
 
-        return iconv('UTF-8', 'ASCII//TRANSLIT', $text);  
-        
-    }
+	    return iconv('UTF-8', 'ASCII//TRANSLIT', $text);  
 
-    //- clean up URLs for print
-    public function clean_url( $link ){
+	}
 
-        $link = html_entity_decode( $link );
+	//- clean up URLs for print
+	public function clean_url( $link ){
 
-        //- remove http/s
-        $link = preg_replace("(^https?://)", "", $link );
+	    $link = html_entity_decode( $link );
 
-        return $link;
+	    //- remove http/s
+	    $link = preg_replace("(^https?://)", "", $link );
 
-    }
-	
+	    return $link;
+
+	}
+
 	
     } //- end of class definition
     
