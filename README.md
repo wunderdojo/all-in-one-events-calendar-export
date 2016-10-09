@@ -19,6 +19,10 @@ All in One Events Calendar can be found here: https://wordpress.org/plugins/all-
 
 This add on was created for a single client and makes certain assumptions (ex: that All in One Event Calendar is already installed as well as the Venues add-on). It is a very simple tool with limited options but would make an easy jumping off point for anyone with the need to do something similar. In particular, if you're having trouble figuring out how to do custom event queries for your own theme / widget / whatever this will show you how to do it. 
 
+![democast][cast]
+
+[cast]: https://github.com/wunderdojo/all-in-one-events-calendar-export/assets/export-events.gif "Democast"
+
 ##NOTES
 Recurring events are listed only once on the date they first occur, like so:
 * * *
