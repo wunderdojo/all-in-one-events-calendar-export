@@ -16,6 +16,12 @@ if( ! class_exists( 'AI1EC_Export' ) ){
     class AI1EC_Export{
 	
 	var $ai1ec_registry = null;
+
+    var $repeating_events = array();
+
+    var $events_to_display = null;
+
+
 	
 	function __construct(){
 	    
@@ -161,7 +167,7 @@ FORM;
 	}
 	
 	/**
-	 * Given an array of event objects formats them for output as a Word doc
+	 * Given an array of event objects formats them for output in RTF format
 	 * 
 	 * Based on: https://gist.github.com/lukaspawlik/045dbd5b517a9eb1cf95
 	 * 
@@ -171,38 +177,84 @@ FORM;
 	public function format_events( $events ){
 	    
 	    $view = $this->ai1ec_registry->get( 'view.calendar.view.agenda', $this->ai1ec_registry->get( 'http.request.parser' ) );
-	    
+
 	    $dates = $view->get_agenda_like_date_array( $events );
 	    
 	    $content = '{\rtf1\ansi\deff0';
-
+    
 	    foreach ( $dates as $date ) {
-		
-		//- set up the header for each date
-		$content .= sprintf( '{\b\caps %1$s, %2$s %3$s} {\line\line}', 
-					$date['full_weekday'],
-					$date['full_month'],
-					$date['day'] );
-		
-		foreach ( $date['events']['allday'] as $instance ) {
-		
-			//- get the event details
-			$content .= $this->get_event_details( $instance );
 
-		}
+            //- track whether there are any events to show and only output the date if there are
+            $this->events_to_display = false;
+            $single_day_content = null;
+            $multi_day_content = null;
+
+            $all_events = $date['events']['allday'] + $date['events']['notallday'];
+
+		    foreach ( $all_events as $instance ) {
+
+                if( $instance['is_multiday'] == 1 ){
+                    $multi_day_content .= $this->process_event( $instance, $date );
+                }
+                else{
+                    $single_day_content .= $this->process_event( $instance, $date );
+                }
+		    }
 		
-		foreach ( $date['events']['notallday'] as $instance ) {
-		    
-			//- get the event details
-			$content .= $this->get_event_details( $instance );
-			
-		}
+            if( $this->events_to_display ) { 
+   
+                //- set up the single day header
+                $display_date = sprintf( '{\b\caps %1$s, %2$s %3$s} {\line\line}', 
+	                $date['full_weekday'],
+	                $date['full_month'],
+	                $date['day'] );
+
+                $content .= $multi_day_content . $display_date . $single_day_content; 
+
+            }
+            
 	    }
 	    
 	    $content.= "}";
 		
 	    return $content;
 	}
+
+
+    /**
+     * Check to see if an event should be displayed (repeating event on first occurrence or one-time event)
+     * 
+     * @param object $instance
+     * 
+     * @return string $details -- the event description formatted for RTF
+     */
+    public function process_event( $instance, $date ){
+
+        $details = null;
+
+        if( ! in_array( $instance['post_id'], $this->repeating_events, true ) ){
+            $this->events_to_display = true;
+
+            if( $instance['is_multiday'] == 1 ){
+               $this->repeating_events[] = $instance['post_id'];
+
+                $end = date( 'l, F d', strtotime( "{$instance['enddate_info']['month']} {$instance['enddate_info']['day']} {$instance['enddate_info']['year']}" ) );
+
+                $display_date = sprintf( '{\b\caps %1$s, %2$s %3$s - %4$s} {\line\line}', 
+	                $date['full_weekday'],
+	                $date['full_month'],
+	                $date['day'],
+                    $end );
+
+                $details .= $display_date;
+            }
+
+            //- get the event details
+            $details .= $this->get_event_details( $instance );
+        }
+
+        return ( $details ) ? $details : '';
+    }
 	
 	/**
 	 * Given a post ID get the details and return a formatted string to be output
@@ -225,17 +277,22 @@ FORM;
 	    $event = $this->ai1ec_registry->get( 'model.event', $instance['post_id'] );
 	    
 	    //- Title
-	    $output .= '{\b ' . $event->get( 'post' )->post_title . '}{\line}';
+        $title_clean = $this->format_for_rtf( $event->get( 'post' )->post_title );
+
+	    $output .= '{\b ' . $title_clean . '}{\line}';
 	    
 	    //- Description
-	    $output .= $event->get( 'post' )->post_content;
+        $output .= $this->format_for_rtf( wp_strip_all_tags( $event->get( 'post' )->post_content ) );
 	    
 	    //- Start time -- only for non all day events
 	    if( ! $instance['is_allday'] ){
 		//- ai1ec outputs an emdash instead of a hyphen between the times which messed up the RTF formatting
-		$output .= " " . str_replace( '–', '-', explode( '@', $instance['timespan_short'] )[1] );
+		$output .= " " . str_replace( '–', '-', explode( '@', $instance['timespan_short'] )[1] ) .'.';
 	    }
-	    
+
+        //- Ticket price
+	    $output .= ( $instance['is_free'] ) ? 'FREE.' : ( isset( $instance['cost'] ) ? $instance['cost'] . '.' : '' );
+
 	    //- check for a venue
 	    if( $instance['venue'] ){
 
@@ -248,23 +305,25 @@ FORM;
 
 		//- Venue address
 		if( $event->get( 'address' ) ){
-		    $output .= $event->get( 'address' ) . '; ';  
+		    //- strip out the country
+            $output .= str_replace( ', USA', '', $event->get( 'address' ) ) . '; ';  
 		}
 		
-		//- Venue URL
-		if( $venue->get( 'url' ) ){
-		    $output .= $venue->get( 'url' ) ;
-		}
-	    }
-		
+        //- Show the ticket URL if there is one or else show the venue URL or organizer URL if there is one. Don't show both.
 	    //- Ticket URL
 	    if( $event->get( 'ticket_url' ) ){
-		$output .= $event->get( 'ticket_url' ) . '; ';  
+		    $output .= $this->clean_url( $event->get( 'ticket_url' ) );  
 	    }
-	    
+		//- Venue URL
+		else if( $venue->get( 'url' ) ){
+		    $output .= $this->clean_url( $venue->get( 'url' ) );
+		}
+
 	    //- Organizer URL
-	    if( $event->get( 'contact_url' ) ){
-		$output .= $event->get( 'contact_url' ) . ';';
+	    else if( $event->get( 'contact_url' ) ){
+		    $output .= $this->clean_url( $event->get( 'contact_url' ) );
+	    }
+
 	    }
 	    
 	    $output .= ' \line' . ' \line';
@@ -272,6 +331,25 @@ FORM;
 	    return $output;
 	    
 	}
+
+    //- fix punctuation issues caused by people cutting-and-pasting from Word docs
+    public function format_for_rtf( $text ){
+
+        return iconv('UTF-8', 'ASCII//TRANSLIT', $text);  
+        
+    }
+
+    //- clean up URLs for print
+    public function clean_url( $link ){
+
+        $link = html_entity_decode( $link );
+
+        //- remove http/s
+        $link = preg_replace("(^https?://)", "", $link );
+
+        return $link;
+
+    }
 	
 	
     } //- end of class definition
