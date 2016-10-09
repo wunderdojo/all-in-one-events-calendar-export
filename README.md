@@ -21,7 +21,7 @@ This add on was created for a single client and makes certain assumptions (ex: t
 
 ![democast][cast]
 
-[cast]: https://github.com/wunderdojo/all-in-one-events-calendar-export/assets/export-events.gif "Democast"
+[cast]: https://github.com/wunderdojo/all-in-one-events-calendar-export/blob/master/assets/export-events.gif "Democastgit add"
 
 ##NOTES
 Recurring events are listed only once on the date they first occur, like so:
