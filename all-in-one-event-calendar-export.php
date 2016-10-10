@@ -111,7 +111,7 @@ FORM;
 	    $params = extract( $_POST );
 	    
 	    $events = $this->get_events( $start_date, $end_date, $categories );
-	    
+
 	    $response = $this->format_events( $events );
 	    
 	    wp_send_json( array( $response ) );
@@ -161,7 +161,7 @@ FORM;
 		    false, //- spanning -- whether to show events that span this period even if they start/end outside the selected dates
 		    false //- whether or not we're searching for events on a single day
 		    );
-	
+
 	    return $events;
 	    
 	}
@@ -175,9 +175,9 @@ FORM;
 	 * 
 	 */
 	public function format_events( $events ){
-	    
+	   
 	    $view = $this->ai1ec_registry->get( 'view.calendar.view.agenda', $this->ai1ec_registry->get( 'http.request.parser' ) );
-
+	    
 	    $dates = $view->get_agenda_like_date_array( $events );
 	    
 	    $content = '{\rtf1\ansi\deff0';
@@ -190,8 +190,8 @@ FORM;
             $multi_day_content = null;
 
             $all_events = $date['events']['allday'] + $date['events']['notallday'];
-
-		    foreach ( $all_events as $instance ) {
+		    
+		foreach ( $all_events as $instance ) {
 
                 if( $instance['is_multiday'] == 1 ){
                     $multi_day_content .= $this->process_event( $instance, $date );
@@ -204,7 +204,7 @@ FORM;
             if( $this->events_to_display ) { 
    
                 //- set up the single day header
-                $display_date = sprintf( '{\b\caps %1$s, %2$s %3$s} {\line\line}', 
+                $display_date = sprintf( '{\b\caps %1$s, %2$s %3$s}{\line}', 
 	                $date['full_weekday'],
 	                $date['full_month'],
 	                $date['day'] );
@@ -234,14 +234,17 @@ FORM;
 
 	    if( ! in_array( $instance['post_id'], $this->repeating_events, true ) ){
 		$this->events_to_display = true;
-
+		
+		//- get the following event properties: https://gist.github.com/lukaspawlik/c4a0e605414542e844dd
+		$event = $this->ai1ec_registry->get( 'model.event', $instance['post_id'] );
+		
+		//- handle multi-day events
 		if( $instance['is_multiday'] == 1 ){
-		   $this->repeating_events[] = $instance['post_id'];
+		    $this->repeating_events[] = $instance['post_id'];
 
 		    $end = date( 'l, F d', strtotime( "{$instance['enddate_info']['month']} {$instance['enddate_info']['day']} {$instance['enddate_info']['year']}" ) );
 
-		    //- multi-day events get their own date listing, ex: SATURDAY, OCT. 8 - FRIDAY, OCT. 14
-		    $display_date = sprintf( '{\b\caps %1$s, %2$s %3$s - %4$s} {\line\line}', 
+		    $display_date = sprintf( '{\b\caps %1$s, %2$s %3$s - %4$s} {\line}', 
 			    $date['full_weekday'],
 			    $date['full_month'],
 			    $date['day'],
@@ -249,9 +252,32 @@ FORM;
 
 		    $details .= $display_date;
 		}
+		
+		//- check if the event is recurring
+		if( $event->get( 'recurrence_rules' ) ){
+		    
+		   $this->repeating_events[] = $instance['post_id'];
+
+		    //- Handle recurrence dates here
+		    $rdates = explode( ',', $event->get( 'recurrence_dates' ) );
+		    
+		    foreach ( $rdates as $rdate ){
+	
+			$end_dates[] = date( 'M d', strtotime( $rdate ) );
+		    
+		    }
+		    
+		    $end = implode( ', ', $end_dates );
+
+		    $display_date = sprintf( '{\i %1$s: %2$s\i0}{\line}', 
+			'Recurs on',
+			$end );
+
+			$details .= $display_date;
+		}
 
 		//- get the event details
-		$details .= $this->get_event_details( $instance );
+		$details .= $this->get_event_details( $instance, $event );
 	    }
 
 	    return ( $details ) ? $details : '';
@@ -260,10 +286,11 @@ FORM;
 	/**
 	 * Given a post ID get the details and return a formatted string to be output
 	 * 
-	 * @param object $instance -- an ai1ec event object
+	 * @param array $instance -- an array of event properties
+	 * @param object $event -- an ai1ec event object
 	 * @return string $event -- a string with the event details for print
 	 * 
-	 * $instance has the following properties:
+	 * $instance has the following keys:
 	 *	post_id
 	 *	venue
 	 *	filtered_title
@@ -272,16 +299,13 @@ FORM;
 	 *	timespan_short: ex: Oct. 17 @ 5:44 pm - 6:44 pm
 	 *	
 	 */
-	public function get_event_details( $instance ){
-	    
-	    //- get the following event properties: https://gist.github.com/lukaspawlik/c4a0e605414542e844dd
-	    $event = $this->ai1ec_registry->get( 'model.event', $instance['post_id'] );
+	public function get_event_details( $instance, $event ){
 	    
 	    //- Title
 	    $title_clean = $this->format_for_rtf( $event->get( 'post' )->post_title );
 
 	    $output .= '{\b ' . $title_clean . '}{\line}';
-	    
+
 	    //- Description
 	    $output .= $this->format_for_rtf( wp_strip_all_tags( $event->get( 'post' )->post_content ) );
 	    
@@ -307,23 +331,23 @@ FORM;
 		//- Venue address
 		if( $event->get( 'address' ) ){
 		    //- strip out the country
-            $output .= str_replace( ', USA', '', $event->get( 'address' ) ) . '; ';  
+		    $output .= str_replace( ', USA', '', $event->get( 'address' ) ) . '; ';  
 		}
 		
-	    //- Show the ticket URL if there is one or else show the venue URL or organizer URL if there is one. Don't show both.
-	    //- Ticket URL
-	    if( $event->get( 'ticket_url' ) ){
-		    $output .= $this->clean_url( $event->get( 'ticket_url' ) );  
-	    }
-		//- Venue URL
-		else if( $venue->get( 'url' ) ){
-		    $output .= $this->clean_url( $venue->get( 'url' ) );
+		//- Show the ticket URL if there is one or else show the venue URL or organizer URL if there is one. Don't show both.
+		//- Ticket URL
+		if( $event->get( 'ticket_url' ) ){
+			$output .= $this->clean_url( $event->get( 'ticket_url' ) );  
 		}
+		    //- Venue URL
+		    else if( $venue->get( 'url' ) ){
+			$output .= $this->clean_url( $venue->get( 'url' ) );
+		    }
 
-	    //- Organizer URL
-	    else if( $event->get( 'contact_url' ) ){
-		    $output .= $this->clean_url( $event->get( 'contact_url' ) );
-	    }
+		//- Organizer URL
+		else if( $event->get( 'contact_url' ) ){
+			$output .= $this->clean_url( $event->get( 'contact_url' ) );
+		}
 
 	    }
 	    
