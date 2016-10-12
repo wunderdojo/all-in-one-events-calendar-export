@@ -231,6 +231,7 @@ FORM;
 	public function process_event( $instance, $date ){
 
 	    $details = null;
+        $recurring_dates = null;
 
 	    if( ! in_array( $instance['post_id'], $this->repeating_events, true ) ){
 		$this->events_to_display = true;
@@ -256,28 +257,40 @@ FORM;
 		//- check if the event is recurring
 		if( $event->get( 'recurrence_rules' ) ){
 		    
-		   $this->repeating_events[] = $instance['post_id'];
+		    $this->repeating_events[] = $instance['post_id'];
 
-		    //- Handle recurrence dates here
-		    $rdates = explode( ',', $event->get( 'recurrence_dates' ) );
-		    
-		    foreach ( $rdates as $rdate ){
+            //- for rule based recurrences -- ex: daily every 1 day -- parse the rule to text for display
+            if( ! $event->get( 'recurrence_dates' ) ){
+                $rule_parser = $this->ai1ec_registry->get( 'recurrence.rule' );
+           
+                $rule_text = $rule_parser->rrule_to_text( $event->get( 'recurrence_rules' ) );
+
+                $recurring_dates = sprintf( '{\line}{\i %1$s\i0}{\line}', 
+			        $rule_text );
+
+            } 
+            else{
+
+		        //- Handle recurrence dates here
+		        $rdates = explode( ',', $event->get( 'recurrence_dates' ) );
+		        
+		        foreach ( $rdates as $rdate ){
 	
-			$end_dates[] = date( 'M d', strtotime( $rdate ) );
+			    $end_dates[] = date( 'M d', strtotime( $rdate ) );
+		        
+		        }
 		    
-		    }
-		    
-		    $end = implode( ', ', $end_dates );
+		        $end = implode( ', ', $end_dates );
 
-		    $display_date = sprintf( '{\i %1$s: %2$s\i0}{\line}', 
-			'Recurs on',
-			$end );
+		        $recurring_dates = sprintf( '{\line}{\i %1$s: %2$s\i0}{\line}', 
+			    'Recurs on',
+			    $end );
+            }
 
-			$details .= $display_date;
 		}
 
 		//- get the event details
-		$details .= $this->get_event_details( $instance, $event );
+		$details .= $this->get_event_details( $instance, $event ) . $recurring_dates . ' \line' . ' \line';
 	    }
 
 	    return ( $details ) ? $details : '';
@@ -350,8 +363,7 @@ FORM;
 		}
 
 	    }
-	    
-	    $output .= ' \line' . ' \line';
+	   
 	    
 	    return $output;
 	    
