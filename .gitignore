@@ -1,8 +1,5 @@
-/nbproject/
-/build/
-/dev/
 /release/
 /node_modules/
-.gitignore
 Gruntfile.js
 package.json
+
