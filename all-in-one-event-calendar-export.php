@@ -259,33 +259,33 @@ FORM;
 		    
 		    $this->repeating_events[] = $instance['post_id'];
 
-            //- for rule based recurrences -- ex: daily every 1 day -- parse the rule to text for display
-            if( ! $event->get( 'recurrence_dates' ) ){
-                $rule_parser = $this->ai1ec_registry->get( 'recurrence.rule' );
-           
-                $rule_text = $rule_parser->rrule_to_text( $event->get( 'recurrence_rules' ) );
+		    //- for rule based recurrences -- ex: daily every 1 day -- parse the rule to text for display
+		    if( ! $event->get( 'recurrence_dates' ) ){
+			$rule_parser = $this->ai1ec_registry->get( 'recurrence.rule' );
 
-                $recurring_dates = sprintf( '{\line}{\i %1$s\i0}{\line}', 
-			        $rule_text );
+			$rule_text = $rule_parser->rrule_to_text( $event->get( 'recurrence_rules' ) );
 
-            } 
-            else{
+			$recurring_dates = sprintf( '{\line}{\i %1$s\i0}{\line}', 
+					$rule_text );
 
-		        //- Handle recurrence dates here
-		        $rdates = explode( ',', $event->get( 'recurrence_dates' ) );
-		        
-		        foreach ( $rdates as $rdate ){
-	
+		    } 
+		    else{
+
+			//- Handle recurrence dates here
+			$rdates = explode( ',', $event->get( 'recurrence_dates' ) );
+
+			foreach ( $rdates as $rdate ){
+
 			    $end_dates[] = date( 'M d', strtotime( $rdate ) );
-		        
-		        }
-		    
-		        $end = implode( ', ', $end_dates );
 
-		        $recurring_dates = sprintf( '{\line}{\i %1$s: %2$s\i0}{\line}', 
+			}
+
+			$end = implode( ', ', $end_dates );
+
+			$recurring_dates = sprintf( '{\line}{\i %1$s: %2$s\i0}{\line}', 
 			    'Recurs on',
-			    $end );
-            }
+			$end );
+		    }
 
 		}
 
@@ -364,7 +364,6 @@ FORM;
 
 	    }
 	   
-	    
 	    return $output;
 	    
 	}
