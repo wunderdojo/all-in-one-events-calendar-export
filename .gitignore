@@ -1,5 +1,4 @@
 /release/
-node_modules/
+/node_modules/
 Gruntfile.js
 package.json
-
