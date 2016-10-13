@@ -21,6 +21,10 @@ if( ! class_exists( 'AI1EC_Export' ) ){
 
 	var $events_to_display = null;
 
+    var $start_date = null;
+
+    var $end_date = null;
+
 
 	
 	function __construct(){
@@ -109,6 +113,10 @@ FORM;
 	public function export_events(){
 	    
 	    $params = extract( $_POST );
+   
+        $this->start_date = DateTime::createFromFormat( 'm-d-Y', $start_date );
+
+        $this->end_date = DateTime::createFromFormat( 'm-d-Y H:i:s', $end_date . ' 23:59:59' );
 	    
 	    $events = $this->get_events( $start_date, $end_date, $categories );
 
@@ -175,7 +183,7 @@ FORM;
 	 * 
 	 */
 	public function format_events( $events ){
-	   
+
 	    $view = $this->ai1ec_registry->get( 'view.calendar.view.agenda', $this->ai1ec_registry->get( 'http.request.parser' ) );
 	    
 	    $dates = $view->get_agenda_like_date_array( $events );
@@ -190,7 +198,7 @@ FORM;
             $multi_day_content = null;
 
             $all_events = $date['events']['allday'] + $date['events']['notallday'];
-		    
+		   
 		foreach ( $all_events as $instance ) {
 
                 if( $instance['is_multiday'] == 1 ){
@@ -225,11 +233,13 @@ FORM;
 	 * Check to see if an event should be displayed (repeating event on first occurrence or one-time event)
 	 * 
 	 * @param object $instance
+     * @param object $date
+     * @param array $all_events
 	 * 
 	 * @return string $details -- the event description formatted for RTF
 	 */
 	public function process_event( $instance, $date ){
-
+     
 	    $details = null;
         $recurring_dates = null;
 
@@ -259,33 +269,39 @@ FORM;
 		    
 		    $this->repeating_events[] = $instance['post_id'];
 
-		    //- for rule based recurrences -- ex: daily every 1 day -- parse the rule to text for display
-		    if( ! $event->get( 'recurrence_dates' ) ){
-			$rule_parser = $this->ai1ec_registry->get( 'recurrence.rule' );
+            //- for rule based recurrences -- ex: daily every 1 day -- parse the rule to text for display
+            if( ! $event->get( 'recurrence_dates' ) ){
+                
+                $rule_parser = $this->ai1ec_registry->get( 'recurrence.rule' );
+           
+                $rule_text = $rule_parser->rrule_to_text( $event->get( 'recurrence_rules' ) );
 
-			$rule_text = $rule_parser->rrule_to_text( $event->get( 'recurrence_rules' ) );
+                $recurring_dates = sprintf( '{\line}{\i %1$s\i0}{\line}', 
+			        $rule_text );
 
-			$recurring_dates = sprintf( '{\line}{\i %1$s\i0}{\line}', 
-					$rule_text );
+            } 
+            else{
+		        //- Handle recurrence dates here
+		        $rdates = explode( ',', $event->get( 'recurrence_dates' ) );
+		        
+		        foreach ( $rdates as $rdate ){
 
-		    } 
-		    else{
+	                $rd = strtotime( $rdate );
 
-			//- Handle recurrence dates here
-			$rdates = explode( ',', $event->get( 'recurrence_dates' ) );
+                    if( $rd >= $this->start_date->getTimestamp() && $rd <= $this->end_date->getTimestamp() ){
+                        
+			            $end_dates[] = date( 'l, F d', strtotime( $rdate ) );
 
-			foreach ( $rdates as $rdate ){
+                    }
+		        
+		        }
+		    
+		        $end = implode( ', ', $end_dates );
 
-			    $end_dates[] = date( 'M d', strtotime( $rdate ) );
-
-			}
-
-			$end = implode( ', ', $end_dates );
-
-			$recurring_dates = sprintf( '{\line}{\i %1$s: %2$s\i0}{\line}', 
+		        $recurring_dates = sprintf( '{\line}{\i %1$s: %2$s\i0}{\line}', 
 			    'Recurs on',
-			$end );
-		    }
+			    $end );
+            }
 
 		}
 
@@ -364,6 +380,7 @@ FORM;
 
 	    }
 	   
+	    
 	    return $output;
 	    
 	}
